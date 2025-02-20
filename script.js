@@ -48,13 +48,59 @@ const renderPackingList = () => {
             ul.className = "list-none";
             items.forEach((item, index) => {
                 const li = document.createElement("li");
-                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2";
-                li.innerHTML = `${item} <button class="text-red-500" onclick="removeItem('${category}', ${index})">❌</button>`;
+                li.className = `flex justify-between items-center bg-gray-200 p-2 rounded mt-2 cursor-pointer transition-colors`;
+                li.dataset.category = category;
+                li.dataset.index = index;
+
+                // Fix `[object Object]` issue
+                const itemName = typeof item === "string" ? item : item.name;
+                li.innerHTML = `${itemName}`;
+
+                // Swipe functionality for mobile (right to mark packed, left to remove)
+                let startX = 0;
+                li.addEventListener("touchstart", (e) => {
+                    startX = e.touches[0].clientX;
+                });
+
+                li.addEventListener("touchend", (e) => {
+                    let diffX = e.changedTouches[0].clientX - startX;
+
+                    if (diffX > 50) {
+                        // Swipe Right → Mark as Packed
+                        togglePacked(li);
+                    } else if (diffX < -50) {
+                        // Swipe Left → Remove Item
+                        removeItem(category, index);
+                    }
+                });
+
+                // Desktop click to mark as packed
+                li.addEventListener("click", () => togglePacked(li));
+
+                // Desktop only: Add remove button (❌)
+                if (window.innerWidth > 768) {
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "text-red-500 ml-2";
+                    deleteBtn.innerHTML = "❌";
+                    deleteBtn.onclick = (event) => {
+                        event.stopPropagation(); // Prevents marking as packed when clicking ❌
+                        removeItem(category, index);
+                    };
+                    li.appendChild(deleteBtn);
+                }
+
                 ul.appendChild(li);
             });
+
             packingListEl.appendChild(ul);
         }
     }
+};
+
+// Toggle Packed State
+const togglePacked = (li) => {
+    li.classList.toggle("bg-green-500");
+    li.classList.toggle("text-white");
 };
 
 // Generate list
