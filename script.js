@@ -21,7 +21,7 @@ const savePackingList = (list) => localStorage.setItem("packingList", JSON.strin
 const showListStep = () => {
     document.getElementById("setupStep").classList.add("hidden");
     document.getElementById("listStep").classList.remove("hidden");
-    renderPackingList(); // Ensure list updates correctly
+    renderPackingList();
 };
 
 // Show the setup step (reset)
@@ -30,7 +30,7 @@ const showSetupStep = () => {
     document.getElementById("listStep").classList.add("hidden");
 };
 
-// Generate Packing List (Fixed)
+// Generate Packing List
 document.getElementById("generateList").addEventListener("click", () => {
     const tripDays = parseInt(document.getElementById("tripDays").value);
     const climateType = document.getElementById("climateType").value;
@@ -54,10 +54,10 @@ document.getElementById("generateList").addEventListener("click", () => {
     if (isSportEquipment) packingList.sport = [...categories.sport];
 
     savePackingList(packingList);
-    showListStep(); // Move to list step
+    showListStep();
 });
 
-// Add custom item (Fixed)
+// Add custom item
 document.getElementById("addItem").addEventListener("click", () => {
     const customItemInput = document.getElementById("customItem");
     const customCategory = document.getElementById("customCategory").value;
@@ -65,22 +65,36 @@ document.getElementById("addItem").addEventListener("click", () => {
 
     if (customItem) {
         let packingList = loadPackingList();
-
-        // Ensure category exists
         if (!packingList[customCategory]) {
             packingList[customCategory] = [];
         }
-
-        // Add new item
         packingList[customCategory].push(customItem);
         savePackingList(packingList);
-
-        // Clear input field
         customItemInput.value = "";
-
-        // Refresh list
         renderPackingList();
     }
+});
+
+// Export List
+document.getElementById("exportList").addEventListener("click", () => {
+    const packingList = loadPackingList();
+    let textContent = "Packing List\n\n";
+
+    for (const [category, items] of Object.entries(packingList)) {
+        textContent += `**${category.toUpperCase()}**\n`;
+        items.forEach(item => {
+            textContent += `- ${item}\n`;
+        });
+        textContent += "\n";
+    }
+
+    const blob = new Blob([textContent], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "packing-list.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 });
 
 // Render Packing List
@@ -94,22 +108,18 @@ const renderPackingList = () => {
             const categoryContainer = document.createElement("div");
             categoryContainer.className = "mt-4";
 
-            // Category Title (Clickable for Accordion)
             const categoryTitle = document.createElement("h3");
             categoryTitle.className = "text-lg font-bold cursor-pointer p-2 flex justify-between items-center";
             categoryTitle.textContent = category.charAt(0).toUpperCase() + category.slice(1);
 
-            // Toggle Icon (+ / -)
             const toggleIcon = document.createElement("span");
-            toggleIcon.textContent = "−"; // Default: Open
+            toggleIcon.textContent = "−";
             toggleIcon.className = "text-xl font-bold";
             categoryTitle.appendChild(toggleIcon);
 
-            // List Container (Initially Visible)
             const listContainer = document.createElement("div");
             listContainer.className = "mt-2 transition-all duration-300";
 
-            // Toggle Accordion Functionality
             categoryTitle.addEventListener("click", () => {
                 listContainer.classList.toggle("hidden");
                 toggleIcon.textContent = listContainer.classList.contains("hidden") ? "+" : "−";
@@ -123,47 +133,39 @@ const renderPackingList = () => {
                 li.dataset.category = category;
                 li.dataset.index = index;
 
-                // Fix `[object Object]` issue
                 const itemName = typeof item === "string" ? item : item.name;
                 li.innerHTML = `<span class="w-full">${itemName}</span>`;
 
-                // Click/Tap to toggle packed state
                 li.addEventListener("click", () => togglePacked(li));
 
-                // Swipe left to remove (mobile) - Fixed
                 let startX = 0;
-                let isSwiping = false;
 
                 li.addEventListener("touchstart", (e) => {
                     startX = e.touches[0].clientX;
-                    isSwiping = false;
-                });
-
-                li.addEventListener("touchmove", (e) => {
-                    let diffX = e.touches[0].clientX - startX;
-                    if (Math.abs(diffX) > 10) {
-                        isSwiping = true;
-                        e.preventDefault(); // Prevent scrolling while swiping
-                        li.style.transform = `translateX(${diffX}px)`;
-                    }
                 });
 
                 li.addEventListener("touchend", (e) => {
                     let diffX = e.changedTouches[0].clientX - startX;
-
                     if (diffX < -50) {
-                        // Swipe Left → Remove Item (with smooth animation)
                         li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
                         li.style.transform = "translateX(-100%)";
                         li.style.opacity = "0";
-
-                        setTimeout(() => {
-                            removeItem(category, index);
-                        }, 300);
+                        setTimeout(() => removeItem(category, index), 300);
                     } else {
                         li.style.transform = "translateX(0px)";
                     }
                 });
+
+                if (window.innerWidth > 768) {
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "text-red-500 ml-2";
+                    deleteBtn.innerHTML = "❌";
+                    deleteBtn.onclick = (event) => {
+                        event.stopPropagation();
+                        removeItem(category, index);
+                    };
+                    li.appendChild(deleteBtn);
+                }
 
                 ul.appendChild(li);
             });
@@ -185,16 +187,7 @@ const togglePacked = (li) => {
 // Remove item
 const removeItem = (category, index) => {
     let packingList = loadPackingList();
-
-    // Remove item from category
     packingList[category].splice(index, 1);
-
-    // If category is empty, remove it entirely
-    if (packingList[category].length === 0) {
-        delete packingList[category];
-    }
-
-    // Save updated list and refresh UI
     savePackingList(packingList);
     renderPackingList();
 };
@@ -205,7 +198,7 @@ document.getElementById("clearList").addEventListener("click", () => {
     showSetupStep();
 });
 
-// Load list if it exists
+// Load list on startup
 document.addEventListener("DOMContentLoaded", () => {
     if (Object.keys(loadPackingList()).length > 0) {
         renderPackingList();
