@@ -122,6 +122,32 @@ const animateRemoveItem = (li, category, index) => {
     }, 300);
 };
 
+// Fix: Add custom item correctly
+document.getElementById("addItem").addEventListener("click", () => {
+    const customItemInput = document.getElementById("customItem");
+    const customCategory = document.getElementById("customCategory").value;
+    const customItem = customItemInput.value.trim();
+
+    if (customItem) {
+        let packingList = loadPackingList();
+
+        // Ensure category exists
+        if (!packingList[customCategory]) {
+            packingList[customCategory] = [];
+        }
+
+        // Add item & save
+        packingList[customCategory].push(customItem);
+        savePackingList(packingList);
+
+        // Clear input field
+        customItemInput.value = "";
+
+        // Refresh UI
+        renderPackingList();
+    }
+});
+
 // Generate list
 document.getElementById("generateList").addEventListener("click", () => {
     const tripDays = parseInt(document.getElementById("tripDays").value);
