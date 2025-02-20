@@ -1,97 +1,220 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Packing List App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 text-gray-900">
+const categories = {
+    essentials: ["Passport", "Driver's License", "Currency Exchange", "Toothbrush", "Toothpaste", "Deodorant", "Phone Charger", "Headphones"],
+    clothing: ["Underwear", "Socks", "Shirts", "Pants"],
+    electronics: ["Phone", "Laptop", "Power Bank"],
+    photo: ["Camera", "Camera batteries", "Lenses", "Tripod", "Lens cleaning cloth"],
+    sport: ["Running shoes", "Sportswear", "Swim goggles", "Jump rope"]
+};
 
-    <div class="max-w-lg mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
-        <h1 class="text-2xl font-bold text-center">📦 Packing List</h1>
+const climatePacking = {
+    sunny: ["Sunglasses", "Beach towel", "Swimsuit", "Sunscreen", "Flip-flops"],
+    mountain: ["Hiking boots", "Backpack", "Jacket", "Water bottle", "Snacks"],
+    rainy: ["Raincoat", "Umbrella", "Waterproof shoes", "Towel"],
+    cold: ["Winter coat", "Gloves", "Scarf", "Warm socks", "Thermal wear"]
+};
 
-        <!-- Step 1: Create List -->
-        <div id="setupStep">
-            <div class="mt-4">
-                <label class="block text-sm font-medium">Number of Days:</label>
-                <input type="number" id="tripDays" class="w-full p-2 border rounded mt-1" min="1" value="3">
-            </div>
+// Retrieve from local storage
+const loadPackingList = () => JSON.parse(localStorage.getItem("packingList")) || {};
+const savePackingList = (list) => localStorage.setItem("packingList", JSON.stringify(list));
 
-            <div class="mt-4">
-                <label class="block text-sm font-medium">Trip Type:</label>
-                <select id="tripType" class="w-full p-2 border rounded mt-1">
-                    <option value="vacation">Vacation</option>
-                    <option value="day_trip">Day Trip</option>
-                </select>
-            </div>
+// Show the list step and hide the setup step
+const showListStep = () => {
+    document.getElementById("setupStep").classList.add("hidden");
+    document.getElementById("listStep").classList.remove("hidden");
+    renderPackingList();
+};
 
-            <div class="mt-4">
-                <label class="block text-sm font-medium">Climate:</label>
-                <select id="climateType" class="w-full p-2 border rounded mt-1">
-                    <option value="sunny">Sunny/Beach</option>
-                    <option value="mountain">Mountain</option>
-                    <option value="rainy">Rainy</option>
-                    <option value="cold">Cold</option>
-                </select>
-            </div>
+// Show the setup step (reset)
+const showSetupStep = () => {
+    document.getElementById("setupStep").classList.remove("hidden");
+    document.getElementById("listStep").classList.add("hidden");
+};
 
-            <!-- Additional Options -->
-            <div class="mt-4">
-                <label class="flex items-center">
-                    <input type="checkbox" id="photoVacation" class="mr-2">
-                    Include Photo Equipment
-                </label>
-                <label class="flex items-center mt-2">
-                    <input type="checkbox" id="sportEquipment" class="mr-2">
-                    Include Sport Equipment
-                </label>
-                <label class="flex items-center mt-2">
-                    <input type="checkbox" id="hotelStay" class="mr-2">
-                    Staying at a Hotel
-                </label>
-            </div>
+// Generate Packing List
+document.getElementById("generateList").addEventListener("click", () => {
+    const tripDays = parseInt(document.getElementById("tripDays").value);
+    const climateType = document.getElementById("climateType").value;
+    const isPhotoVacation = document.getElementById("photoVacation").checked;
+    const isSportEquipment = document.getElementById("sportEquipment").checked;
+    const isHotelStay = document.getElementById("hotelStay").checked;
 
-            <button id="generateList" class="mt-4 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-                Generate Packing List
-            </button>
-        </div>
+    let packingList = JSON.parse(JSON.stringify(categories));
+    packingList.clothing = categories.clothing.map(item => `${item} x${tripDays}`);
 
-        <!-- Step 2: View List -->
-        <div id="listStep" class="hidden">
-            <h2 class="text-xl font-bold mt-6">Your Packing List</h2>
-            <div id="packingList" class="mt-2"></div>
+    if (!isHotelStay) {
+        packingList.essentials.push("Towel");
+    }
 
-            <!-- Add Custom Item -->
-            <div class="mt-8">  <!-- Increased margin for better UX -->
-                <h3 class="text-lg font-semibold mt-6">Add Custom Item</h3>
-                <div class="mt-4 flex">
-                    <input type="text" id="customItem" class="w-full p-2 border rounded" placeholder="Add custom item">
-                    <select id="customCategory" class="ml-2 p-2 border rounded">
-                        <option value="essentials">Essentials</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="photo">Photo Equipment</option>
-                        <option value="sport">Sport Equipment</option>
-                    </select>
-                    <button id="addItem" class="ml-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">+</button>
-                </div>
-            </div>
+    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
 
-            <!-- Export & Import Buttons -->
-            <div class="mt-6 flex justify-between">
-                <button id="exportList" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-600">Export List</button>
-                <input type="file" id="importList" accept=".json" class="hidden">
-                <label for="importList" class="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-600">Import List</label>
-            </div>
+    if (!isPhotoVacation) delete packingList.photo;
+    if (!isSportEquipment) delete packingList.sport;
 
-            <!-- Start Over Button (Extra Spacing for Better UX) -->
-            <button id="clearList" class="mt-20 w-full bg-red-500 text-white p-2 rounded hover:bg-red-600">
-                Start Over
-            </button>
-        </div>
-    </div>
+    savePackingList(packingList);
+    showListStep();
+});
 
-    <script src="script.js"></script>
-</body>
-</html>
+// Confirm before clearing the list
+document.getElementById("clearList").addEventListener("click", () => {
+    if (confirm("Are you sure you want to start over? This will delete your current packing list.")) {
+        localStorage.removeItem("packingList");
+        showSetupStep();
+    }
+});
+
+// Add custom item
+document.getElementById("addItem").addEventListener("click", () => {
+    const customItemInput = document.getElementById("customItem");
+    const customCategory = document.getElementById("customCategory").value;
+    const customItem = customItemInput.value.trim();
+
+    if (customItem) {
+        let packingList = loadPackingList();
+        if (!packingList[customCategory]) {
+            packingList[customCategory] = [];
+        }
+        packingList[customCategory].push(customItem);
+        savePackingList(packingList);
+
+        customItemInput.value = "";
+        renderPackingList();
+    }
+});
+
+// Export List as JSON File
+document.getElementById("exportList").addEventListener("click", () => {
+    const packingList = loadPackingList();
+    const jsonString = JSON.stringify(packingList, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "packing-list.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+});
+
+// Import List from JSON File
+document.getElementById("importList").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importedList = JSON.parse(e.target.result);
+            savePackingList(importedList);
+            renderPackingList();
+            showListStep();
+            alert("Packing list successfully imported!");
+        } catch (error) {
+            alert("Invalid file format. Please upload a valid JSON file.");
+        }
+    };
+    reader.readAsText(file);
+});
+
+// Render Packing List
+const renderPackingList = () => {
+    const packingListEl = document.getElementById("packingList");
+    packingListEl.innerHTML = "";
+    const packingList = loadPackingList();
+
+    for (const [category, items] of Object.entries(packingList)) {
+        if (items.length > 0) {
+            const categoryContainer = document.createElement("div");
+            categoryContainer.className = "mt-8";
+
+            // Category Title (Accordion)
+            const categoryTitle = document.createElement("h3");
+            categoryTitle.className = "text-lg font-bold cursor-pointer p-2 flex justify-between items-center";
+            categoryTitle.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+
+            const toggleIcon = document.createElement("span");
+            toggleIcon.textContent = "−";
+            toggleIcon.className = "text-xl font-bold";
+            categoryTitle.appendChild(toggleIcon);
+
+            const listContainer = document.createElement("div");
+            listContainer.className = "mt-2 transition-all duration-300";
+
+            categoryTitle.addEventListener("click", () => {
+                listContainer.classList.toggle("hidden");
+                toggleIcon.textContent = listContainer.classList.contains("hidden") ? "+" : "−";
+            });
+
+            const ul = document.createElement("ul");
+            ul.className = "list-none";
+
+            items.forEach((item, index) => {
+                const li = document.createElement("li");
+                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 border cursor-pointer transition-all duration-300";
+                li.dataset.category = category;
+                li.dataset.index = index;
+
+                const itemName = typeof item === "string" ? item : item.name;
+                li.innerHTML = `<span class="w-full">${itemName}</span>`;
+
+                // Click/Tap to toggle packed state
+                li.addEventListener("click", () => togglePacked(li));
+
+                // Swipe left to remove (Mobile)
+                let startX = 0;
+                li.addEventListener("touchstart", (e) => {
+                    startX = e.touches[0].clientX;
+                });
+
+                li.addEventListener("touchend", (e) => {
+                    let diffX = e.changedTouches[0].clientX - startX;
+                    if (diffX < -50) {
+                        li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
+                        li.style.transform = "translateX(-100%)";
+                        li.style.opacity = "0";
+                        setTimeout(() => removeItem(category, index), 300);
+                    }
+                });
+
+                // Desktop Remove Button (X)
+                if (window.innerWidth > 768) {
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "text-red-500 ml-2";
+                    deleteBtn.innerHTML = "❌";
+                    deleteBtn.onclick = (event) => {
+                        event.stopPropagation();
+                        removeItem(category, index);
+                    };
+                    li.appendChild(deleteBtn);
+                }
+
+                ul.appendChild(li);
+            });
+
+            listContainer.appendChild(ul);
+            categoryContainer.appendChild(categoryTitle);
+            categoryContainer.appendChild(listContainer);
+            packingListEl.appendChild(categoryContainer);
+        }
+    }
+};
+
+// Toggle Packed State
+const togglePacked = (li) => {
+    li.classList.toggle("bg-green-500");
+    li.classList.toggle("text-white");
+};
+
+// Remove item
+const removeItem = (category, index) => {
+    let packingList = loadPackingList();
+    packingList[category].splice(index, 1);
+    savePackingList(packingList);
+    renderPackingList();
+};
+
+// Load list if it exists
+document.addEventListener("DOMContentLoaded", () => {
+    if (Object.keys(loadPackingList()).length > 0) {
+        renderPackingList();
+        showListStep();
+    }
+});
