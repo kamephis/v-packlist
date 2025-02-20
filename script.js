@@ -21,6 +21,7 @@ const savePackingList = (list) => localStorage.setItem("packingList", JSON.strin
 const showListStep = () => {
     document.getElementById("setupStep").classList.add("hidden");
     document.getElementById("listStep").classList.remove("hidden");
+    renderPackingList(); // Ensure the list updates correctly
 };
 
 // Show the setup step (reset)
@@ -29,7 +30,60 @@ const showSetupStep = () => {
     document.getElementById("listStep").classList.add("hidden");
 };
 
-// Render packing list
+// Add custom item (Fixed)
+document.getElementById("addItem").addEventListener("click", () => {
+    const customItemInput = document.getElementById("customItem");
+    const customCategory = document.getElementById("customCategory").value;
+    const customItem = customItemInput.value.trim();
+
+    if (customItem) {
+        let packingList = loadPackingList();
+
+        // Ensure category exists
+        if (!packingList[customCategory]) {
+            packingList[customCategory] = [];
+        }
+
+        // Add new item
+        packingList[customCategory].push(customItem);
+        savePackingList(packingList);
+
+        // Clear input field
+        customItemInput.value = "";
+
+        // Refresh list
+        renderPackingList();
+    }
+});
+
+// Generate Packing List
+document.getElementById("generateList").addEventListener("click", () => {
+    const tripDays = parseInt(document.getElementById("tripDays").value);
+    const climateType = document.getElementById("climateType").value;
+    const isPhotoVacation = document.getElementById("photoVacation").checked;
+    const isSportEquipment = document.getElementById("sportEquipment").checked;
+    const isHotelStay = document.getElementById("hotelStay").checked;
+
+    let packingList = {
+        essentials: [...categories.essentials],
+        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
+        electronics: [...categories.electronics]
+    };
+
+    if (!isHotelStay) {
+        packingList.essentials.push("Towel");
+    }
+
+    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
+
+    if (isPhotoVacation) packingList.photo = [...categories.photo];
+    if (isSportEquipment) packingList.sport = [...categories.sport];
+
+    savePackingList(packingList);
+    showListStep(); // Move to list step
+});
+
+// Render Packing List
 const renderPackingList = () => {
     const packingListEl = document.getElementById("packingList");
     packingListEl.innerHTML = "";
@@ -133,42 +187,6 @@ const togglePacked = (li) => {
     li.classList.toggle("bg-green-500");
     li.classList.toggle("text-white");
 };
-
-// Animate removing an item
-const animateRemoveItem = (li, category, index) => {
-    li.style.transition = "transform 0.3s ease-out";
-    li.style.transform = "translateX(-100%)";
-
-    setTimeout(() => {
-        removeItem(category, index);
-    }, 300);
-};
-
-// Fix: Add custom item correctly
-document.getElementById("addItem").addEventListener("click", () => {
-    const customItemInput = document.getElementById("customItem");
-    const customCategory = document.getElementById("customCategory").value;
-    const customItem = customItemInput.value.trim();
-
-    if (customItem) {
-        let packingList = loadPackingList();
-
-        // Ensure category exists
-        if (!packingList[customCategory]) {
-            packingList[customCategory] = [];
-        }
-
-        // Add item & save
-        packingList[customCategory].push(customItem);
-        savePackingList(packingList);
-
-        // Clear input field
-        customItemInput.value = "";
-
-        // Refresh UI
-        renderPackingList();
-    }
-});
 
 // Remove item
 const removeItem = (category, index) => {
