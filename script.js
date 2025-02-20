@@ -37,16 +37,35 @@ const renderPackingList = () => {
 
     for (const [category, items] of Object.entries(packingList)) {
         if (items.length > 0) {
+            const categoryContainer = document.createElement("div");
+            categoryContainer.className = "mt-4";
+
+            // Category Title (Clickable for Accordion)
             const categoryTitle = document.createElement("h3");
-            categoryTitle.className = "text-lg font-bold mt-4";
+            categoryTitle.className = "text-lg font-bold cursor-pointer p-2 flex justify-between items-center";
             categoryTitle.textContent = category.charAt(0).toUpperCase() + category.slice(1);
-            packingListEl.appendChild(categoryTitle);
+
+            // Toggle Icon (+ / -)
+            const toggleIcon = document.createElement("span");
+            toggleIcon.textContent = "−"; // Default: Open
+            toggleIcon.className = "text-xl font-bold";
+            categoryTitle.appendChild(toggleIcon);
+
+            // List Container (Initially Visible)
+            const listContainer = document.createElement("div");
+            listContainer.className = "mt-2 transition-all duration-300";
+
+            // Toggle Accordion Functionality
+            categoryTitle.addEventListener("click", () => {
+                listContainer.classList.toggle("hidden");
+                toggleIcon.textContent = listContainer.classList.contains("hidden") ? "+" : "−";
+            });
 
             const ul = document.createElement("ul");
             ul.className = "list-none";
             items.forEach((item, index) => {
                 const li = document.createElement("li");
-                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 cursor-pointer transition-all duration-300";
+                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 border cursor-pointer transition-all duration-300";
                 li.dataset.category = category;
                 li.dataset.index = index;
 
@@ -101,7 +120,10 @@ const renderPackingList = () => {
                 ul.appendChild(li);
             });
 
-            packingListEl.appendChild(ul);
+            listContainer.appendChild(ul);
+            categoryContainer.appendChild(categoryTitle);
+            categoryContainer.appendChild(listContainer);
+            packingListEl.appendChild(categoryContainer);
         }
     }
 };
@@ -146,34 +168,6 @@ document.getElementById("addItem").addEventListener("click", () => {
         // Refresh UI
         renderPackingList();
     }
-});
-
-// Generate list
-document.getElementById("generateList").addEventListener("click", () => {
-    const tripDays = parseInt(document.getElementById("tripDays").value);
-    const climateType = document.getElementById("climateType").value;
-    const isPhotoVacation = document.getElementById("photoVacation").checked;
-    const isSportEquipment = document.getElementById("sportEquipment").checked;
-    const isHotelStay = document.getElementById("hotelStay").checked;
-
-    let packingList = {
-        essentials: [...categories.essentials],
-        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
-        electronics: [...categories.electronics]
-    };
-
-    if (!isHotelStay) {
-        packingList.essentials.push("Towel");
-    }
-
-    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
-
-    if (isPhotoVacation) packingList.photo = [...categories.photo];
-    if (isSportEquipment) packingList.sport = [...categories.sport];
-
-    savePackingList(packingList);
-    renderPackingList();
-    showListStep(); // Move to list step
 });
 
 // Remove item
