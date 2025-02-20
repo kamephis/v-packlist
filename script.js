@@ -21,7 +21,7 @@ const savePackingList = (list) => localStorage.setItem("packingList", JSON.strin
 const showListStep = () => {
     document.getElementById("setupStep").classList.add("hidden");
     document.getElementById("listStep").classList.remove("hidden");
-    renderPackingList(); // Ensure the list updates correctly
+    renderPackingList(); // Ensure list updates correctly
 };
 
 // Show the setup step (reset)
@@ -29,59 +29,6 @@ const showSetupStep = () => {
     document.getElementById("setupStep").classList.remove("hidden");
     document.getElementById("listStep").classList.add("hidden");
 };
-
-// Add custom item (Fixed)
-document.getElementById("addItem").addEventListener("click", () => {
-    const customItemInput = document.getElementById("customItem");
-    const customCategory = document.getElementById("customCategory").value;
-    const customItem = customItemInput.value.trim();
-
-    if (customItem) {
-        let packingList = loadPackingList();
-
-        // Ensure category exists
-        if (!packingList[customCategory]) {
-            packingList[customCategory] = [];
-        }
-
-        // Add new item
-        packingList[customCategory].push(customItem);
-        savePackingList(packingList);
-
-        // Clear input field
-        customItemInput.value = "";
-
-        // Refresh list
-        renderPackingList();
-    }
-});
-
-// Generate Packing List
-document.getElementById("generateList").addEventListener("click", () => {
-    const tripDays = parseInt(document.getElementById("tripDays").value);
-    const climateType = document.getElementById("climateType").value;
-    const isPhotoVacation = document.getElementById("photoVacation").checked;
-    const isSportEquipment = document.getElementById("sportEquipment").checked;
-    const isHotelStay = document.getElementById("hotelStay").checked;
-
-    let packingList = {
-        essentials: [...categories.essentials],
-        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
-        electronics: [...categories.electronics]
-    };
-
-    if (!isHotelStay) {
-        packingList.essentials.push("Towel");
-    }
-
-    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
-
-    if (isPhotoVacation) packingList.photo = [...categories.photo];
-    if (isSportEquipment) packingList.sport = [...categories.sport];
-
-    savePackingList(packingList);
-    showListStep(); // Move to list step
-});
 
 // Render Packing List
 const renderPackingList = () => {
@@ -130,7 +77,7 @@ const renderPackingList = () => {
                 // Click/Tap to toggle packed state
                 li.addEventListener("click", () => togglePacked(li));
 
-                // Swipe left to remove (mobile)
+                // Swipe left to remove (mobile) - Fixed
                 let startX = 0;
                 let isSwiping = false;
 
@@ -152,8 +99,14 @@ const renderPackingList = () => {
                     let diffX = e.changedTouches[0].clientX - startX;
 
                     if (diffX < -50) {
-                        // Swipe Left → Remove Item
-                        animateRemoveItem(li, category, index);
+                        // Swipe Left → Remove Item (with smooth animation)
+                        li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
+                        li.style.transform = "translateX(-100%)";
+                        li.style.opacity = "0";
+
+                        setTimeout(() => {
+                            removeItem(category, index);
+                        }, 300);
                     } else {
                         li.style.transform = "translateX(0px)";
                     }
@@ -191,7 +144,16 @@ const togglePacked = (li) => {
 // Remove item
 const removeItem = (category, index) => {
     let packingList = loadPackingList();
+
+    // Remove item from category
     packingList[category].splice(index, 1);
+
+    // If category is empty, remove it entirely
+    if (packingList[category].length === 0) {
+        delete packingList[category];
+    }
+
+    // Save updated list and refresh UI
     savePackingList(packingList);
     renderPackingList();
 };
