@@ -21,7 +21,7 @@ const savePackingList = (list) => localStorage.setItem("packingList", JSON.strin
 const showListStep = () => {
     document.getElementById("setupStep").classList.add("hidden");
     document.getElementById("listStep").classList.remove("hidden");
-    renderPackingList();
+    renderPackingList(); // Ensure list updates correctly
 };
 
 // Show the setup step (reset)
@@ -30,7 +30,7 @@ const showSetupStep = () => {
     document.getElementById("listStep").classList.add("hidden");
 };
 
-// Generate Packing List
+// Generate Packing List (Fixed)
 document.getElementById("generateList").addEventListener("click", () => {
     const tripDays = parseInt(document.getElementById("tripDays").value);
     const climateType = document.getElementById("climateType").value;
@@ -38,8 +38,11 @@ document.getElementById("generateList").addEventListener("click", () => {
     const isSportEquipment = document.getElementById("sportEquipment").checked;
     const isHotelStay = document.getElementById("hotelStay").checked;
 
-    let packingList = JSON.parse(JSON.stringify(categories));
-    packingList.clothing = categories.clothing.map(item => `${item} x${tripDays}`);
+    let packingList = {
+        essentials: [...categories.essentials],
+        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
+        electronics: [...categories.electronics]
+    };
 
     if (!isHotelStay) {
         packingList.essentials.push("Towel");
@@ -47,22 +50,14 @@ document.getElementById("generateList").addEventListener("click", () => {
 
     packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
 
-    if (!isPhotoVacation) delete packingList.photo;
-    if (!isSportEquipment) delete packingList.sport;
+    if (isPhotoVacation) packingList.photo = [...categories.photo];
+    if (isSportEquipment) packingList.sport = [...categories.sport];
 
     savePackingList(packingList);
-    showListStep();
+    showListStep(); // Move to list step
 });
 
-// Confirm before clearing the list
-document.getElementById("clearList").addEventListener("click", () => {
-    if (confirm("Are you sure you want to start over? This will delete your current packing list.")) {
-        localStorage.removeItem("packingList");
-        showSetupStep();
-    }
-});
-
-// Add custom item
+// Add custom item (Fixed)
 document.getElementById("addItem").addEventListener("click", () => {
     const customItemInput = document.getElementById("customItem");
     const customCategory = document.getElementById("customCategory").value;
@@ -70,48 +65,22 @@ document.getElementById("addItem").addEventListener("click", () => {
 
     if (customItem) {
         let packingList = loadPackingList();
+
+        // Ensure category exists
         if (!packingList[customCategory]) {
             packingList[customCategory] = [];
         }
+
+        // Add new item
         packingList[customCategory].push(customItem);
         savePackingList(packingList);
 
+        // Clear input field
         customItemInput.value = "";
+
+        // Refresh list
         renderPackingList();
     }
-});
-
-// Export List as JSON File
-document.getElementById("exportList").addEventListener("click", () => {
-    const packingList = loadPackingList();
-    const jsonString = JSON.stringify(packingList, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "packing-list.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-});
-
-// Import List from JSON File
-document.getElementById("importList").addEventListener("change", (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const importedList = JSON.parse(e.target.result);
-            savePackingList(importedList);
-            renderPackingList();
-            showListStep();
-            alert("Packing list successfully imported!");
-        } catch (error) {
-            alert("Invalid file format. Please upload a valid JSON file.");
-        }
-    };
-    reader.readAsText(file);
 });
 
 // Render Packing List
@@ -123,21 +92,24 @@ const renderPackingList = () => {
     for (const [category, items] of Object.entries(packingList)) {
         if (items.length > 0) {
             const categoryContainer = document.createElement("div");
-            categoryContainer.className = "mt-8";
+            categoryContainer.className = "mt-4";
 
-            // Category Title (Accordion)
+            // Category Title (Clickable for Accordion)
             const categoryTitle = document.createElement("h3");
             categoryTitle.className = "text-lg font-bold cursor-pointer p-2 flex justify-between items-center";
             categoryTitle.textContent = category.charAt(0).toUpperCase() + category.slice(1);
 
+            // Toggle Icon (+ / -)
             const toggleIcon = document.createElement("span");
-            toggleIcon.textContent = "−";
+            toggleIcon.textContent = "−"; // Default: Open
             toggleIcon.className = "text-xl font-bold";
             categoryTitle.appendChild(toggleIcon);
 
+            // List Container (Initially Visible)
             const listContainer = document.createElement("div");
             listContainer.className = "mt-2 transition-all duration-300";
 
+            // Toggle Accordion Functionality
             categoryTitle.addEventListener("click", () => {
                 listContainer.classList.toggle("hidden");
                 toggleIcon.textContent = listContainer.classList.contains("hidden") ? "+" : "−";
@@ -145,46 +117,53 @@ const renderPackingList = () => {
 
             const ul = document.createElement("ul");
             ul.className = "list-none";
-
             items.forEach((item, index) => {
                 const li = document.createElement("li");
                 li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 border cursor-pointer transition-all duration-300";
                 li.dataset.category = category;
                 li.dataset.index = index;
 
+                // Fix `[object Object]` issue
                 const itemName = typeof item === "string" ? item : item.name;
                 li.innerHTML = `<span class="w-full">${itemName}</span>`;
 
                 // Click/Tap to toggle packed state
                 li.addEventListener("click", () => togglePacked(li));
 
-                // Swipe left to remove (Mobile)
+                // Swipe left to remove (mobile) - Fixed
                 let startX = 0;
+                let isSwiping = false;
+
                 li.addEventListener("touchstart", (e) => {
                     startX = e.touches[0].clientX;
+                    isSwiping = false;
+                });
+
+                li.addEventListener("touchmove", (e) => {
+                    let diffX = e.touches[0].clientX - startX;
+                    if (Math.abs(diffX) > 10) {
+                        isSwiping = true;
+                        e.preventDefault(); // Prevent scrolling while swiping
+                        li.style.transform = `translateX(${diffX}px)`;
+                    }
                 });
 
                 li.addEventListener("touchend", (e) => {
                     let diffX = e.changedTouches[0].clientX - startX;
+
                     if (diffX < -50) {
+                        // Swipe Left → Remove Item (with smooth animation)
                         li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
                         li.style.transform = "translateX(-100%)";
                         li.style.opacity = "0";
-                        setTimeout(() => removeItem(category, index), 300);
+
+                        setTimeout(() => {
+                            removeItem(category, index);
+                        }, 300);
+                    } else {
+                        li.style.transform = "translateX(0px)";
                     }
                 });
-
-                // Desktop Remove Button (X)
-                if (window.innerWidth > 768) {
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.className = "text-red-500 ml-2";
-                    deleteBtn.innerHTML = "❌";
-                    deleteBtn.onclick = (event) => {
-                        event.stopPropagation();
-                        removeItem(category, index);
-                    };
-                    li.appendChild(deleteBtn);
-                }
 
                 ul.appendChild(li);
             });
@@ -206,10 +185,25 @@ const togglePacked = (li) => {
 // Remove item
 const removeItem = (category, index) => {
     let packingList = loadPackingList();
+
+    // Remove item from category
     packingList[category].splice(index, 1);
+
+    // If category is empty, remove it entirely
+    if (packingList[category].length === 0) {
+        delete packingList[category];
+    }
+
+    // Save updated list and refresh UI
     savePackingList(packingList);
     renderPackingList();
 };
+
+// Clear list and restart
+document.getElementById("clearList").addEventListener("click", () => {
+    localStorage.removeItem("packingList");
+    showSetupStep();
+});
 
 // Load list if it exists
 document.addEventListener("DOMContentLoaded", () => {
