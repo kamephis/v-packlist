@@ -173,7 +173,7 @@ const renderPackingList = () => {
 
 // Toggle Packed State (Fix styling)
 const togglePacked = (li) => {
-    li.classList.toggle("bg-green-500");
+    li.classList.toggle("bg-green-500"); // Restore Green Highlight
     li.classList.toggle("text-white");
     li.querySelector("span").classList.toggle("line-through");
 };
