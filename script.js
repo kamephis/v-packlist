@@ -75,26 +75,37 @@ document.getElementById("addItem").addEventListener("click", () => {
     }
 });
 
-// Export List
+// Export Packing List as JSON (Fixed)
 document.getElementById("exportList").addEventListener("click", () => {
     const packingList = loadPackingList();
-    let textContent = "Packing List\n\n";
+    const jsonContent = JSON.stringify(packingList, null, 2); // Pretty format JSON
 
-    for (const [category, items] of Object.entries(packingList)) {
-        textContent += `**${category.toUpperCase()}**\n`;
-        items.forEach(item => {
-            textContent += `- ${item}\n`;
-        });
-        textContent += "\n";
-    }
-
-    const blob = new Blob([textContent], { type: "text/plain" });
+    const blob = new Blob([jsonContent], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "packing-list.txt";
+    link.download = "packing-list.json";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+});
+
+// Import Packing List (Fixed)
+document.getElementById("importList").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const importedList = JSON.parse(e.target.result);
+                savePackingList(importedList);
+                renderPackingList();
+                showListStep();
+            } catch (error) {
+                alert("Invalid JSON file. Please upload a valid packing list.");
+            }
+        };
+        reader.readAsText(file);
+    }
 });
 
 // Render Packing List
@@ -138,24 +149,6 @@ const renderPackingList = () => {
 
                 li.addEventListener("click", () => togglePacked(li));
 
-                let startX = 0;
-
-                li.addEventListener("touchstart", (e) => {
-                    startX = e.touches[0].clientX;
-                });
-
-                li.addEventListener("touchend", (e) => {
-                    let diffX = e.changedTouches[0].clientX - startX;
-                    if (diffX < -50) {
-                        li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
-                        li.style.transform = "translateX(-100%)";
-                        li.style.opacity = "0";
-                        setTimeout(() => removeItem(category, index), 300);
-                    } else {
-                        li.style.transform = "translateX(0px)";
-                    }
-                });
-
                 if (window.innerWidth > 768) {
                     const deleteBtn = document.createElement("button");
                     deleteBtn.className = "text-red-500 ml-2";
@@ -178,10 +171,11 @@ const renderPackingList = () => {
     }
 };
 
-// Toggle Packed State
+// Toggle Packed State (Fix styling)
 const togglePacked = (li) => {
     li.classList.toggle("bg-green-500");
     li.classList.toggle("text-white");
+    li.querySelector("span").classList.toggle("line-through");
 };
 
 // Remove item
