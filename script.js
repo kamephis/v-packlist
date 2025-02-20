@@ -30,6 +30,59 @@ const showSetupStep = () => {
     document.getElementById("listStep").classList.add("hidden");
 };
 
+// Generate Packing List (Fixed)
+document.getElementById("generateList").addEventListener("click", () => {
+    const tripDays = parseInt(document.getElementById("tripDays").value);
+    const climateType = document.getElementById("climateType").value;
+    const isPhotoVacation = document.getElementById("photoVacation").checked;
+    const isSportEquipment = document.getElementById("sportEquipment").checked;
+    const isHotelStay = document.getElementById("hotelStay").checked;
+
+    let packingList = {
+        essentials: [...categories.essentials],
+        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
+        electronics: [...categories.electronics]
+    };
+
+    if (!isHotelStay) {
+        packingList.essentials.push("Towel");
+    }
+
+    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
+
+    if (isPhotoVacation) packingList.photo = [...categories.photo];
+    if (isSportEquipment) packingList.sport = [...categories.sport];
+
+    savePackingList(packingList);
+    showListStep(); // Move to list step
+});
+
+// Add custom item (Fixed)
+document.getElementById("addItem").addEventListener("click", () => {
+    const customItemInput = document.getElementById("customItem");
+    const customCategory = document.getElementById("customCategory").value;
+    const customItem = customItemInput.value.trim();
+
+    if (customItem) {
+        let packingList = loadPackingList();
+
+        // Ensure category exists
+        if (!packingList[customCategory]) {
+            packingList[customCategory] = [];
+        }
+
+        // Add new item
+        packingList[customCategory].push(customItem);
+        savePackingList(packingList);
+
+        // Clear input field
+        customItemInput.value = "";
+
+        // Refresh list
+        renderPackingList();
+    }
+});
+
 // Render Packing List
 const renderPackingList = () => {
     const packingListEl = document.getElementById("packingList");
@@ -111,18 +164,6 @@ const renderPackingList = () => {
                         li.style.transform = "translateX(0px)";
                     }
                 });
-
-                // Desktop only: Add remove button (❌)
-                if (window.innerWidth > 768) {
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.className = "text-red-500 ml-2";
-                    deleteBtn.innerHTML = "❌";
-                    deleteBtn.onclick = (event) => {
-                        event.stopPropagation(); // Prevents marking as packed when clicking ❌
-                        removeItem(category, index);
-                    };
-                    li.appendChild(deleteBtn);
-                }
 
                 ul.appendChild(li);
             });
