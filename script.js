@@ -15,8 +15,6 @@ const climatePacking = {
 
 // Retrieve from local storage
 const loadPackingList = () => JSON.parse(localStorage.getItem("packingList")) || {};
-
-// Save to local storage
 const savePackingList = (list) => localStorage.setItem("packingList", JSON.stringify(list));
 
 // Show the list step and hide the setup step
@@ -48,34 +46,45 @@ const renderPackingList = () => {
             ul.className = "list-none";
             items.forEach((item, index) => {
                 const li = document.createElement("li");
-                li.className = `flex justify-between items-center bg-gray-200 p-2 rounded mt-2 cursor-pointer transition-colors`;
+                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 cursor-pointer transition-all duration-300";
                 li.dataset.category = category;
                 li.dataset.index = index;
 
                 // Fix `[object Object]` issue
                 const itemName = typeof item === "string" ? item : item.name;
-                li.innerHTML = `${itemName}`;
+                li.innerHTML = `<span class="w-full">${itemName}</span>`;
 
-                // Swipe functionality for mobile (right to mark packed, left to remove)
+                // Click/Tap to toggle packed state
+                li.addEventListener("click", () => togglePacked(li));
+
+                // Swipe left to remove (mobile)
                 let startX = 0;
+                let isSwiping = false;
+
                 li.addEventListener("touchstart", (e) => {
                     startX = e.touches[0].clientX;
+                    isSwiping = false;
+                });
+
+                li.addEventListener("touchmove", (e) => {
+                    let diffX = e.touches[0].clientX - startX;
+                    if (Math.abs(diffX) > 10) {
+                        isSwiping = true;
+                        e.preventDefault(); // Prevent scrolling while swiping
+                        li.style.transform = `translateX(${diffX}px)`;
+                    }
                 });
 
                 li.addEventListener("touchend", (e) => {
                     let diffX = e.changedTouches[0].clientX - startX;
 
-                    if (diffX > 50) {
-                        // Swipe Right → Mark as Packed
-                        togglePacked(li);
-                    } else if (diffX < -50) {
+                    if (diffX < -50) {
                         // Swipe Left → Remove Item
-                        removeItem(category, index);
+                        animateRemoveItem(li, category, index);
+                    } else {
+                        li.style.transform = "translateX(0px)";
                     }
                 });
-
-                // Desktop click to mark as packed
-                li.addEventListener("click", () => togglePacked(li));
 
                 // Desktop only: Add remove button (❌)
                 if (window.innerWidth > 768) {
@@ -101,6 +110,16 @@ const renderPackingList = () => {
 const togglePacked = (li) => {
     li.classList.toggle("bg-green-500");
     li.classList.toggle("text-white");
+};
+
+// Animate removing an item
+const animateRemoveItem = (li, category, index) => {
+    li.style.transition = "transform 0.3s ease-out";
+    li.style.transform = "translateX(-100%)";
+
+    setTimeout(() => {
+        removeItem(category, index);
+    }, 300);
 };
 
 // Generate list
@@ -129,24 +148,6 @@ document.getElementById("generateList").addEventListener("click", () => {
     savePackingList(packingList);
     renderPackingList();
     showListStep(); // Move to list step
-});
-
-// Add custom item
-document.getElementById("addItem").addEventListener("click", () => {
-    const customItemInput = document.getElementById("customItem");
-    const customCategory = document.getElementById("customCategory").value;
-    const customItem = customItemInput.value.trim();
-
-    if (customItem) {
-        let packingList = loadPackingList();
-        if (!packingList[customCategory]) {
-            packingList[customCategory] = [];
-        }
-        packingList[customCategory].push(customItem);
-        savePackingList(packingList);
-        customItemInput.value = "";
-        renderPackingList();
-    }
 });
 
 // Remove item
