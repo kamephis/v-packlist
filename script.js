@@ -129,7 +129,7 @@ const removeItem = (category, index) => {
     renderPackingList();
 };
 
-// Render Packing List
+// Render Packing List with Swipe Left to Remove
 const renderPackingList = () => {
     const packingListEl = document.getElementById("packingList");
     packingListEl.innerHTML = "";
@@ -166,21 +166,27 @@ const renderPackingList = () => {
                 }`;
                 li.dataset.category = category;
                 li.dataset.index = index;
-
                 li.innerHTML = `<span class="w-full">${item.name}</span>`;
 
                 li.addEventListener("click", () => togglePacked(li));
 
-                if (window.innerWidth > 768) {
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.className = "text-red-500 ml-2";
-                    deleteBtn.innerHTML = "❌";
-                    deleteBtn.onclick = (event) => {
-                        event.stopPropagation();
-                        removeItem(category, index);
-                    };
-                    li.appendChild(deleteBtn);
-                }
+                let startX = 0;
+
+                li.addEventListener("touchstart", (e) => {
+                    startX = e.touches[0].clientX;
+                });
+
+                li.addEventListener("touchend", (e) => {
+                    let diffX = e.changedTouches[0].clientX - startX;
+                    if (diffX < -50) {
+                        li.style.transition = "transform 0.3s ease-out, opacity 0.3s ease-out";
+                        li.style.transform = "translateX(-100%)";
+                        li.style.opacity = "0";
+                        setTimeout(() => removeItem(category, index), 300);
+                    } else {
+                        li.style.transform = "translateX(0px)";
+                    }
+                });
 
                 ul.appendChild(li);
             });
