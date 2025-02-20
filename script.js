@@ -108,7 +108,7 @@ document.getElementById("importList").addEventListener("change", (event) => {
     }
 });
 
-// Render Packing List
+// Render Packing List (Updated to restore packed state)
 const renderPackingList = () => {
     const packingListEl = document.getElementById("packingList");
     packingListEl.innerHTML = "";
@@ -144,8 +144,17 @@ const renderPackingList = () => {
                 li.dataset.category = category;
                 li.dataset.index = index;
 
-                const itemName = typeof item === "string" ? item : item.name;
+                // Check if item is packed
+                let isPacked = item.includes("[Packed]");
+                let itemName = isPacked ? item.replace("[Packed] ", "") : item;
+
                 li.innerHTML = `<span class="w-full">${itemName}</span>`;
+
+                // Apply packed styling
+                if (isPacked) {
+                    li.classList.add("bg-green-500", "text-white");
+                    li.querySelector("span").classList.add("line-through");
+                }
 
                 li.addEventListener("click", () => togglePacked(li));
 
@@ -173,9 +182,19 @@ const renderPackingList = () => {
 
 // Toggle Packed State (Fix styling)
 const togglePacked = (li) => {
-    li.classList.toggle("bg-green-500"); // Restore Green Highlight
-    li.classList.toggle("text-white");
-    li.querySelector("span").classList.toggle("line-through");
+    const category = li.dataset.category;
+    const index = li.dataset.index;
+    let packingList = loadPackingList();
+
+    // Toggle packed state in local storage
+    if (!packingList[category][index].includes("[Packed]")) {
+        packingList[category][index] = `[Packed] ${packingList[category][index]}`;
+    } else {
+        packingList[category][index] = packingList[category][index].replace("[Packed] ", "");
+    }
+
+    savePackingList(packingList);
+    renderPackingList();
 };
 
 // Remove item
