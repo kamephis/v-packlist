@@ -39,19 +39,21 @@ document.getElementById("generateList").addEventListener("click", () => {
     const isHotelStay = document.getElementById("hotelStay").checked;
 
     let packingList = {
-        essentials: [...categories.essentials],
-        clothing: [...categories.clothing.map(item => `${item} x${tripDays}`)],
-        electronics: [...categories.electronics]
+        essentials: categories.essentials.map(item => ({ name: item, packed: false })),
+        clothing: categories.clothing.map(item => ({ name: `${item} x${tripDays}`, packed: false })),
+        electronics: categories.electronics.map(item => ({ name: item, packed: false }))
     };
 
     if (!isHotelStay) {
-        packingList.essentials.push("Towel");
+        packingList.essentials.push({ name: "Towel", packed: false });
     }
 
-    packingList.essentials = [...new Set(packingList.essentials.concat(climatePacking[climateType] || []))];
+    (climatePacking[climateType] || []).forEach(item => {
+        packingList.essentials.push({ name: item, packed: false });
+    });
 
-    if (isPhotoVacation) packingList.photo = [...categories.photo];
-    if (isSportEquipment) packingList.sport = [...categories.sport];
+    if (isPhotoVacation) packingList.photo = categories.photo.map(item => ({ name: item, packed: false }));
+    if (isSportEquipment) packingList.sport = categories.sport.map(item => ({ name: item, packed: false }));
 
     savePackingList(packingList);
     showListStep();
@@ -108,6 +110,25 @@ document.getElementById("importList").addEventListener("change", (event) => {
     }
 });
 
+// Toggle Packed State
+const togglePacked = (li) => {
+    const category = li.dataset.category;
+    const index = li.dataset.index;
+    let packingList = loadPackingList();
+
+    packingList[category][index].packed = !packingList[category][index].packed;
+    savePackingList(packingList);
+    renderPackingList();
+};
+
+// Remove item
+const removeItem = (category, index) => {
+    let packingList = loadPackingList();
+    packingList[category].splice(index, 1);
+    savePackingList(packingList);
+    renderPackingList();
+};
+
 // Render Packing List
 const renderPackingList = () => {
     const packingListEl = document.getElementById("packingList");
@@ -140,19 +161,13 @@ const renderPackingList = () => {
             ul.className = "list-none";
             items.forEach((item, index) => {
                 const li = document.createElement("li");
-                li.className = "flex justify-between items-center bg-gray-200 p-2 rounded mt-2 border cursor-pointer transition-all duration-300";
+                li.className = `flex justify-between items-center p-2 rounded mt-2 border cursor-pointer transition-all duration-300 ${
+                    item.packed ? "bg-green-500 text-white line-through" : "bg-gray-200"
+                }`;
                 li.dataset.category = category;
                 li.dataset.index = index;
 
-                const isPacked = typeof item === "object" && item.packed;
-                const itemName = typeof item === "object" ? item.name : item;
-
-                li.innerHTML = `<span class="w-full">${itemName}</span>`;
-
-                if (isPacked) {
-                    li.classList.add("bg-green-500", "text-white");
-                    li.querySelector("span").classList.add("line-through");
-                }
+                li.innerHTML = `<span class="w-full">${item.name}</span>`;
 
                 li.addEventListener("click", () => togglePacked(li));
 
@@ -177,41 +192,3 @@ const renderPackingList = () => {
         }
     }
 };
-
-// Toggle Packed State (Fix styling and persist in localStorage)
-const togglePacked = (li) => {
-    const category = li.dataset.category;
-    const index = li.dataset.index;
-    let packingList = loadPackingList();
-
-    // Toggle packed state
-    packingList[category][index] = {
-        name: packingList[category][index].name || packingList[category][index],
-        packed: !packingList[category][index].packed
-    };
-
-    savePackingList(packingList);
-    renderPackingList();
-};
-
-// Remove item
-const removeItem = (category, index) => {
-    let packingList = loadPackingList();
-    packingList[category].splice(index, 1);
-    savePackingList(packingList);
-    renderPackingList();
-};
-
-// Clear list and restart
-document.getElementById("clearList").addEventListener("click", () => {
-    localStorage.removeItem("packingList");
-    showSetupStep();
-});
-
-// Load list on startup
-document.addEventListener("DOMContentLoaded", () => {
-    if (Object.keys(loadPackingList()).length > 0) {
-        renderPackingList();
-        showListStep();
-    }
-});
