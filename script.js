@@ -28,6 +28,7 @@ const showListStep = () => {
 const showSetupStep = () => {
     document.getElementById("setupStep").classList.remove("hidden");
     document.getElementById("listStep").classList.add("hidden");
+    document.getElementById("packingList").innerHTML = ""; // Clear packing list UI
 };
 
 // Generate Packing List
@@ -198,3 +199,9 @@ const renderPackingList = () => {
         }
     }
 };
+
+// Clear list and restart
+document.getElementById("clearList").addEventListener("click", () => {
+    localStorage.removeItem("packingList");
+    showSetupStep();
+});
